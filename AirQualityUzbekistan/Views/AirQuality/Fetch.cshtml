@@ -1,0 +1,118 @@
+﻿@model AirQualityUzbekistan.Models.AirQualityRecord
+
+@{
+    ViewData["Title"] = "Получить текущие данные";
+    Layout = "_Layout";
+}
+
+<h2>Получить данные о качестве воздуха</h2>
+
+<form asp-action="Fetch" method="get" class="mb-4">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label for="state" class="form-label">Штат:</label>
+            <select id="state" name="state" class="form-select" asp-items="ViewBag.States">
+                <option value="">-- Выберите штат --</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="city" class="form-label">Город:</label>
+            <select id="city" name="city" class="form-select">
+                <option value="">-- Сначала выберите штат --</option>
+            </select>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Получить данные</button>
+</form>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-info">@TempData["Message"]</div>
+}
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <p>@error.ErrorMessage</p>
+        }
+    </div>
+}
+
+@if (Model != null && Model.City != null)
+{
+    <h4>Текущие данные:</h4>
+    <dl class="row">
+        <dt class="col-sm-3">Город:</dt>
+        <dd class="col-sm-9">@Model.City</dd>
+
+        <dt class="col-sm-3">Штат:</dt>
+        <dd class="col-sm-9">@Model.State</dd>
+
+        <dt class="col-sm-3">Страна:</dt>
+        <dd class="col-sm-9">@Model.Country</dd>
+
+        <dt class="col-sm-3">Широта:</dt>
+        <dd class="col-sm-9">@Model.Latitude</dd>
+
+        <dt class="col-sm-3">Долгота:</dt>
+        <dd class="col-sm-9">@Model.Longitude</dd>
+
+        <dt class="col-sm-3">AQI (US):</dt>
+        <dd class="col-sm-9">@Model.AQIUS (главный загрязнитель: @Model.MainPollutantUS)</dd>
+
+        <dt class="col-sm-3">AQI (CN):</dt>
+        <dd class="col-sm-9">@Model.AQICN (главный загрязнитель: @Model.MainPollutantCN)</dd>
+
+        <dt class="col-sm-3">Температура:</dt>
+        <dd class="col-sm-9">@Model.Temperature °C</dd>
+
+        <dt class="col-sm-3">Влажность:</dt>
+        <dd class="col-sm-9">@Model.Humidity %</dd>
+
+        <dt class="col-sm-3">Давление:</dt>
+        <dd class="col-sm-9">@Model.Pressure hPa</dd>
+
+        <dt class="col-sm-3">Направление ветра:</dt>
+        <dd class="col-sm-9">@Model.WindDirection °</dd>
+
+        <dt class="col-sm-3">Скорость ветра:</dt>
+        <dd class="col-sm-9">@Model.WindSpeed м/с</dd>
+
+        <dt class="col-sm-3">Время замера:</dt>
+        <dd class="col-sm-9">@Model.Timestamp</dd>
+    </dl>
+
+    <form method="post" asp-action="Save">
+        @* Передаём все поля модели через hidden *@
+        @foreach (var prop in typeof(AirQualityUzbekistan.Models.AirQualityRecord).GetProperties())
+        {
+            <input type="hidden" name="@prop.Name" value="@prop.GetValue(Model)" />
+        }
+        <button type="submit" class="btn btn-success">Сохранить в базу</button>
+    </form>
+}
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(function () {
+            $('#state').on('change', function () {
+                var selectedState = $(this).val();
+                $('#city').empty().append('<option>Загрузка...</option>');
+
+                $.get('/AirQuality/GetCities', { state: selectedState })
+                    .done(function (cities) {
+                        $('#city').empty().append('<option value="">-- Выберите город --</option>');
+                        $.each(cities, function (i, city) {
+                            $('#city').append('<option value="' + city + '">' + city + '</option>');
+                        });
+                    })
+                    .fail(function () {
+                        $('#city').empty().append('<option>Ошибка загрузки</option>');
+                    });
+            });
+        });
+    </script>
+}
